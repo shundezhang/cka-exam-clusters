@@ -47,11 +47,7 @@ tool_install_info() {
     fi
 }
 
-if ! hash gcloud
-then
-    echo "Missing the GCE gcloud tool..."
-    exit 1
-elif ! hash kubectl
+if ! hash kubectl
 then
     echo "Missing kubectl..."
     tool_install_info
@@ -63,89 +59,12 @@ then
     exit 1
 fi
 
-echo "Creating cluster network..."
-gcloud compute networks create k8s-cluster-network --subnet-mode custom
-
-echo "Creating cluster network subnet used by the instances..."
-gcloud compute networks subnets create k8s-cluster-network \
-  --network k8s-cluster-network \
-  --range 10.240.0.0/24
-
-echo "Creating firewall rule that allows internal communication within the cluster..."
-gcloud compute firewall-rules create k8s-cluster-allow-internal \
-  --allow tcp,udp,icmp \
-  --network k8s-cluster-network \
-  --source-ranges 10.240.0.0/24,10.200.0.0/16
-
-echo "Creating firewall rule that allows external communication to the cluster..."
-gcloud compute firewall-rules create k8s-cluster-allow-external \
-  --allow tcp:22,tcp:6443,icmp \
-  --network k8s-cluster-network \
-  --source-ranges 0.0.0.0/0
-
-echo "Creating a static external IP address..."
-gcloud compute addresses create k8s-cluster-external \
-  --region $(gcloud config get-value compute/region)
-
 echo "Creating cluster instances..."
 k8s_cluster=(etcd-0 master-0 worker-0 worker-1)
 
 worker_ip_start=20
 worker_pod_ip_start=0
 
-for host in ${k8s_cluster[@]}
-do
-  tag=$(echo $host | sed -e 's/-.*//g')
-  if [[ $host = *"worker"* ]]
-  then
-    gcloud compute instances create ${host} \
-      --async \
-      --boot-disk-size 20GB \
-      --can-ip-forward \
-      --image-family ubuntu-1804-lts \
-      --image-project ubuntu-os-cloud \
-      --machine-type n1-standard-1 \
-      --metadata pod-cidr=10.200.${worker_pod_ip_start}.0/24 \
-      --private-network-ip 10.240.0.${worker_ip_start} \
-      --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
-      --subnet k8s-cluster-network \
-      --tags k8s,${tag}
-    
-    worker_ip_start=$((worker_ip_start + 1))
-    worker_pod_ip_start=$((worker_pod_ip_start + 1))
-  elif [[ $host = *"master"* ]]
-  then
-    gcloud compute instances create ${host} \
-      --async \
-      --boot-disk-size 20GB \
-      --can-ip-forward \
-      --image-family ubuntu-1804-lts \
-      --image-project ubuntu-os-cloud \
-      --machine-type n1-standard-1 \
-      --private-network-ip 10.240.0.10 \
-      --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
-      --subnet k8s-cluster-network \
-      --tags k8s,${tag}
-  elif [[ $host = *"etcd"* ]]
-  then
-    gcloud compute instances create ${host} \
-      --async \
-      --boot-disk-size 20GB \
-      --can-ip-forward \
-      --image-family ubuntu-1804-lts \
-      --image-project ubuntu-os-cloud \
-      --machine-type n1-standard-1 \
-      --private-network-ip 10.240.0.11 \
-      --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
-      --subnet k8s-cluster-network \
-      --tags k8s,${tag}
-  else
-    echo "$host not recognized, exiting..."
-    exit 1
-  fi
-done
-
-read -p "CHECK THE STATUS OF CREATED INSTANCES!" -n 1 -r
 
 echo "Creating certificates..."
 mkdir $PWD/k8s-files
@@ -225,7 +144,7 @@ cfssl gencert \
 }
 
 echo "Creating the kubelet client certificates..."
-for instance in worker-0 worker-1; do
+for instance in knode-2 knode-3; do
 cat > ${instance}-csr.json <<EOF
 {
   "CN": "system:node:${instance}",
@@ -245,17 +164,11 @@ cat > ${instance}-csr.json <<EOF
 }
 EOF
 
-EXTERNAL_IP=$(gcloud compute instances describe ${instance} \
-  --format 'value(networkInterfaces[0].accessConfigs[0].natIP)')
-
-INTERNAL_IP=$(gcloud compute instances describe ${instance} \
-  --format 'value(networkInterfaces[0].networkIP)')
-
 cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${instance},${EXTERNAL_IP},${INTERNAL_IP} \
+  -hostname=${instance} \
   -profile=kubernetes \
   ${instance}-csr.json | cfssljson -bare ${instance}
 done
@@ -356,9 +269,7 @@ cfssl gencert \
 echo "Creating the kube-apiserver certificate..."
 {
 
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe k8s-cluster-external \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(address)')
+KUBERNETES_PUBLIC_ADDRESS=$(curl http://169.254.169.254/1.0/meta-data/local-ipv4)
 
 cat > kubernetes-csr.json <<EOF
 {
@@ -421,23 +332,20 @@ cfssl gencert \
 }
 
 echo "Distribute certificates and keys to worker instances..."
-for instance in worker-0 worker-1; do
-  gcloud compute scp ca.pem ${instance}-key.pem ${instance}.pem ${instance}:~/
+for instance in knode-2 knode-3; do
+  scp ca.pem ${instance}-key.pem ${instance}.pem ${instance}:~/
 done
 
-echo "Distribute certificate(s) and key(s) to etcd-0..."
-gcloud compute scp ca.pem kubernetes-key.pem kubernetes.pem etcd-0:~/
+#echo "Distribute certificate(s) and key(s) to etcd-0..."
+#scp ca.pem kubernetes-key.pem kubernetes.pem etcd-0:~/
 
-echo "Distribute certificate(s) and key(s) to master-0..."
-gcloud compute scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem service-account-key.pem service-account.pem master-0:~/
+#echo "Distribute certificate(s) and key(s) to master-0..."
+#gcloud compute scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem service-account-key.pem service-account.pem master-0:~/
 
 echo "Generate Kubernetes configuration files for authentication..."
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe k8s-cluster-external \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(address)')
 
 echo "Generate kubeconfig files for kubelets..."
-for instance in worker-0 worker-1; do
+for instance in knode-2 knode-3; do
   kubectl config set-cluster k8s-cluster \
     --certificate-authority=ca.pem \
     --embed-certs=true \
@@ -547,12 +455,12 @@ echo "Generate a kubeconfig for the admin user..."
 }
 
 echo "Distribute the kubeconfig files to worker instances..."
-for instance in worker-0 worker-1; do
-  gcloud compute scp ${instance}.kubeconfig kube-proxy.kubeconfig ${instance}:~/
+for instance in knode-2 knode-3; do
+  scp ${instance}.kubeconfig kube-proxy.kubeconfig ${instance}:~/
 done
 
-echo "Distribute the kubeconfig files to the master instance..."
-gcloud compute scp admin.kubeconfig kube-controller-manager.kubeconfig kube-scheduler.kubeconfig master-0:~/
+#echo "Distribute the kubeconfig files to the master instance..."
+#cp admin.kubeconfig kube-controller-manager.kubeconfig kube-scheduler.kubeconfig master-0:~/
 
 echo "Generating the data encryption config and key..."
 ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
@@ -571,8 +479,8 @@ resources:
       - identity: {}
 EOF
 
-echo "Copy the encryption config file to the master instance..."
-gcloud compute scp encryption-config.yaml master-0:~/
+#echo "Copy the encryption config file to the master instance..."
+#gcloud compute scp encryption-config.yaml master-0:~/
 
 echo 
 echo "Finished! Here's the instances created:"
