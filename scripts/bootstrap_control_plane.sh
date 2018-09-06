@@ -26,8 +26,7 @@ wget -q --show-progress --https-only --timestamping \
     encryption-config.yaml /var/lib/kubernetes/
 }
 
-INTERNAL_IP=$(curl -s -H "Metadata-Flavor: Google" \
-          http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip)
+INTERNAL_IP=$(curl http://169.254.169.254/1.0/meta-data/local-ipv4)
 
 cat <<EOF | sudo tee /etc/systemd/system/kube-apiserver.service
 [Unit]
@@ -202,32 +201,3 @@ subjects:
     name: kubernetes
 EOF
 
-# Create load balancer, health check, fw rule for health check, target pool for "load balancing" and a forwarding rule
-
-{
-  KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe k8s-cluster-external \
-    --region $(gcloud config get-value compute/region) \
-    --format 'value(address)')
-
-  gcloud compute http-health-checks create k8s-cluster-apiserver-health-check \
-    --description "Kubernetes Health Check" \
-    --host "kubernetes.default.svc.cluster.local" \
-    --request-path "/healthz"
-
-  gcloud compute firewall-rules create k8s-cluster-allow-health-check \
-    --network k8s-cluster-network \
-    --source-ranges 209.85.152.0/22,209.85.204.0/22,35.191.0.0/16 \
-    --allow tcp
-
-  gcloud compute target-pools create k8s-apiserver-target-pool \
-    --http-health-check k8s-cluster-apiserver-health-check
-
-  gcloud compute target-pools add-instances k8s-apiserver-target-pool \
-   --instances master-0
-
-  gcloud compute forwarding-rules create kubernetes-forwarding-rule \
-    --address ${KUBERNETES_PUBLIC_ADDRESS} \
-    --ports 6443 \
-    --region $(gcloud config get-value compute/region) \
-    --target-pool k8s-apiserver-target-pool
-}
