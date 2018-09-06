@@ -41,8 +41,7 @@ sudo mkdir -p \
 
 # Configure CNI networking
 
-POD_CIDR=$(curl -s -H "Metadata-Flavor: Google" \
-  http://metadata.google.internal/computeMetadata/v1/instance/attributes/pod-cidr)
+POD_CIDR=$(curl http://169.254.169.254/1.0/meta-data/local-ipv4)
 
 # Create bridge
 
