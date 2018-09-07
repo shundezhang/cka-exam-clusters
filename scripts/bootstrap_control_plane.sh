@@ -161,7 +161,7 @@ EOF
 # RBAC for kubelet authorization
 # Create ClusterRole
 
-cat <<EOF | kubectl apply --kubeconfig admin.kubeconfig -f -
+cat <<EOF | kubectl apply --kubeconfig ~/admin.kubeconfig -f -
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
@@ -185,7 +185,7 @@ EOF
 
 # Bind the ClusterRole to user kubernetes
 
-cat <<EOF | kubectl apply --kubeconfig admin.kubeconfig -f -
+cat <<EOF | kubectl apply --kubeconfig ~/admin.kubeconfig -f -
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
