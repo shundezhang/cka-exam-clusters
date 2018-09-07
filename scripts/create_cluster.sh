@@ -19,7 +19,7 @@ tool_install_info() {
         echo "kubectl:"
         echo "  wget https://storage.googleapis.com/kubernetes-release/release/v1.11.0/bin/linux/amd64/kubectl"
         echo "  chmod +x kubectl"
-        echo "s udo mv kubectl /usr/local/bin/"
+        echo "  sudo mv kubectl /usr/local/bin/"
         echo "cfssl:"
         echo "  wget -q --show-progress --https-only --timestamping \
                     https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 \
