@@ -73,7 +73,7 @@ EOF
 
 # Kubernetes controller manager
 
-sudo mv kube-controller-manager.kubeconfig /var/lib/kubernetes/
+sudo mv ~/kube-controller-manager.kubeconfig /var/lib/kubernetes/
 
 cat <<EOF | sudo tee /etc/systemd/system/kube-controller-manager.service
 [Unit]
@@ -102,7 +102,7 @@ EOF
 
 # Kubernetes scheduler
 
-sudo mv kube-scheduler.kubeconfig /var/lib/kubernetes/
+sudo mv ~/kube-scheduler.kubeconfig /var/lib/kubernetes/
 
 cat <<EOF | sudo tee /etc/kubernetes/config/kube-scheduler.yaml
 apiVersion: componentconfig/v1alpha1
