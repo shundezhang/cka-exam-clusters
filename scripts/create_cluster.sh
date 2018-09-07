@@ -17,7 +17,7 @@ tool_install_info() {
     then
         echo
         echo "kubectl:"
-        echo "  wget https://storage.googleapis.com/kubernetes-release/release/v1.10.2/bin/linux/amd64/kubectl"
+        echo "  wget https://storage.googleapis.com/kubernetes-release/release/v1.11.0/bin/linux/amd64/kubectl"
         echo "  chmod +x kubectl"
         echo "s udo mv kubectl /usr/local/bin/"
         echo "cfssl:"
@@ -32,7 +32,7 @@ tool_install_info() {
     then
         echo
         echo "kubectl:"
-        echo "  curl -o kubectl https://storage.googleapis.com/kubernetes-release/release/v1.10.2/bin/darwin/amd64/kubectl"
+        echo "  curl -o kubectl https://storage.googleapis.com/kubernetes-release/release/v1.11.0/bin/darwin/amd64/kubectl"
         echo "  chmod +x kubectl"
         echo "  sudo mv kubectl /usr/local/bin/"
         echo "cfssl:"
