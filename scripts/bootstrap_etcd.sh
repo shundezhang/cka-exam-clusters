@@ -12,7 +12,7 @@ wget -q --show-progress --https-only --timestamping \
 
 {
   sudo mkdir -p /etc/etcd /var/lib/etcd
-  sudo cp ca.pem kubernetes-key.pem kubernetes.pem /etc/etcd/
+  sudo cp ~/ca.pem ~/kubernetes-key.pem ~/kubernetes.pem /etc/etcd/
 }
 
 INTERNAL_IP=$(curl http://169.254.169.254/1.0/meta-data/local-ipv4)
