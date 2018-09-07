@@ -115,9 +115,9 @@ EOF
 # Configure kubelet
 
 {
-  sudo mv ${HOSTNAME}-key.pem ${HOSTNAME}.pem /var/lib/kubelet/
-  sudo mv ${HOSTNAME}.kubeconfig /var/lib/kubelet/kubeconfig
-  sudo mv ca.pem /var/lib/kubernetes/
+  sudo mv ~/${HOSTNAME}-key.pem ${HOSTNAME}.pem /var/lib/kubelet/
+  sudo mv ~/${HOSTNAME}.kubeconfig /var/lib/kubelet/kubeconfig
+  sudo mv ~/ca.pem /var/lib/kubernetes/
 }
 
 cat <<EOF | sudo tee /var/lib/kubelet/kubelet-config.yaml
@@ -167,7 +167,7 @@ EOF
 
 # Configure the kube-proxy
 
-sudo mv kube-proxy.kubeconfig /var/lib/kube-proxy/kubeconfig
+sudo mv ~/kube-proxy.kubeconfig /var/lib/kube-proxy/kubeconfig
 
 cat <<EOF | sudo tee /var/lib/kube-proxy/kube-proxy-config.yaml
 kind: KubeProxyConfiguration
