@@ -336,11 +336,11 @@ for instance in knode-2 knode-3; do
   scp ca.pem ${instance}-key.pem ${instance}.pem ${instance}:~/
 done
 
-#echo "Distribute certificate(s) and key(s) to etcd-0..."
-#scp ca.pem kubernetes-key.pem kubernetes.pem etcd-0:~/
+echo "Distribute certificate(s) and key(s) to etcd-0..."
+cp ca.pem kubernetes-key.pem kubernetes.pem ~
 
-#echo "Distribute certificate(s) and key(s) to master-0..."
-#gcloud compute scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem service-account-key.pem service-account.pem master-0:~/
+echo "Distribute certificate(s) and key(s) to master-0..."
+cp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem service-account-key.pem service-account.pem ~/
 
 echo "Generate Kubernetes configuration files for authentication..."
 
@@ -459,8 +459,8 @@ for instance in knode-2 knode-3; do
   scp ${instance}.kubeconfig kube-proxy.kubeconfig ${instance}:~/
 done
 
-#echo "Distribute the kubeconfig files to the master instance..."
-#cp admin.kubeconfig kube-controller-manager.kubeconfig kube-scheduler.kubeconfig master-0:~/
+echo "Distribute the kubeconfig files to the master instance..."
+cp admin.kubeconfig kube-controller-manager.kubeconfig kube-scheduler.kubeconfig ~/
 
 echo "Generating the data encryption config and key..."
 ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
@@ -479,8 +479,8 @@ resources:
       - identity: {}
 EOF
 
-#echo "Copy the encryption config file to the master instance..."
-#gcloud compute scp encryption-config.yaml master-0:~/
+echo "Copy the encryption config file to the master instance..."
+cp encryption-config.yaml ~/
 
 echo 
 echo "Finished! Here's the instances created:"
