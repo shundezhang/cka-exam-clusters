@@ -41,7 +41,7 @@ sudo mkdir -p \
 
 # Configure CNI networking
 
-POD_CIDR=$(curl http://169.254.169.254/1.0/meta-data/local-ipv4)
+POD_CIDR="10.200.0.0/24"
 
 # Create bridge
 
